@@ -1458,73 +1458,14 @@
       // Abrupt scroll to scroll target
       else if (!getOption('smoothScroll')) {
         window.scrollTo(0, scrollToVal);
-
         if (cb) { cb(); } // HopscotchBubble.show
       }
 
-      // Smooth scroll to scroll target
-      else {
-        // Use YUI if it exists
-        if (typeof YAHOO             !== undefinedStr &&
-            typeof YAHOO.env         !== undefinedStr &&
-            typeof YAHOO.env.ua      !== undefinedStr &&
-            typeof YAHOO.util        !== undefinedStr &&
-            typeof YAHOO.util.Scroll !== undefinedStr) {
-          scrollEl = YAHOO.env.ua.webkit ? document.body : document.documentElement;
-          yuiEase = YAHOO.util.Easing ? YAHOO.util.Easing.easeOut : undefined;
-          yuiAnim = new YAHOO.util.Scroll(scrollEl, {
-            scroll: { to: [0, scrollToVal] }
-          }, getOption('scrollDuration')/1000, yuiEase);
-          yuiAnim.onComplete.subscribe(cb);
-          yuiAnim.animate();
-        }
-
         // Use jQuery if it exists
-        else if (hasJquery) {
-          jQuery('body, html').animate({ scrollTop: scrollToVal }, getOption('scrollDuration'), cb);
-        }
-
-        // Use my crummy setInterval scroll solution if we're using plain, vanilla Javascript.
-        else {
-          if (scrollToVal < 0) {
-            scrollToVal = 0;
-          }
-
-          // 48 * 10 == 480ms scroll duration
-          // make it slightly less than CSS transition duration because of
-          // setInterval overhead.
-          // To increase or decrease duration, change the divisor of scrollIncr.
-          direction = (windowTop > targetTop) ? -1 : 1; // -1 means scrolling up, 1 means down
-          scrollIncr = Math.abs(windowTop - scrollToVal) / (getOption('scrollDuration')/10);
-          scrollTimeoutFn = function() {
-            var scrollTop = utils.getScrollTop(),
-                scrollTarget = scrollTop + (direction * scrollIncr);
-
-            if ((direction > 0 && scrollTarget >= scrollToVal) ||
-                (direction < 0 && scrollTarget <= scrollToVal)) {
-              // Overshot our target. Just manually set to equal the target
-              // and clear the interval
-              scrollTarget = scrollToVal;
-              if (cb) { cb(); } // HopscotchBubble.show
-              window.scrollTo(0, scrollTarget);
-              return;
-            }
-
-            window.scrollTo(0, scrollTarget);
-
-            if (utils.getScrollTop() === scrollTop) {
-              // Couldn't scroll any further.
-              if (cb) { cb(); } // HopscotchBubble.show
-              return;
-            }
-
-            // If we reached this point, that means there's still more to scroll.
-            setTimeout(scrollTimeoutFn, 10);
-          };
-
-          scrollTimeoutFn();
-        }
+      else if (hasJquery) {
+        jQuery('.scroll-container, body, html').animate({ scrollTop: scrollToVal }, getOption('scrollDuration'), cb);
       }
+
     },
 
     /**

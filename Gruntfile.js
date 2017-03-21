@@ -306,7 +306,7 @@ module.exports = function(grunt) {
   grunt.registerTask(
     'buildRelease',
     'Build hopscotch for release (update files in dist directory and create tar.gz and zip archives of the release)',
-    ['test', 'clean:dist', 'copy:releaseWithBanner', 'copy:release', 'compress']
+    ['test', 'clean:dist', 'copy:releaseWithBanner', 'copy:release' ]
   );
   grunt.registerTask(
     'releasePatch',
