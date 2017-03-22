@@ -74,7 +74,6 @@
   } catch (err) {}
 
   defaultOpts       = {
-    smoothScroll:    true,
     scrollDuration:  1000,
     scrollTopMargin: 200,
     showCloseButton: true,
@@ -281,7 +280,10 @@
     /**
      * @private
      */
-    getScrollTop: function() {
+    getScrollTop: function(scrollAnchor) {
+    //  var s = Hopscotch.getCurrStep().scrollAnchor();
+      return $(scrollAnchor ? scrollAnchor:"body, html").scrollTop(); 
+/*
       var scrollTop;
       if (typeof window.pageYOffset !== undefinedStr) {
         scrollTop = window.pageYOffset;
@@ -291,12 +293,16 @@
         scrollTop = document.documentElement.scrollTop;
       }
       return scrollTop;
+*/
     },
 
     /**
      * @private
      */
     getScrollLeft: function() {
+//      var s = Hopscotch.getCurrStep().scrollAnchor();
+      return $("body, html").scrollLeft(); 
+/*
       var scrollLeft;
       if (typeof window.pageXOffset !== undefinedStr) {
         scrollLeft = window.pageXOffset;
@@ -306,6 +312,7 @@
         scrollLeft = document.documentElement.scrollLeft;
       }
       return scrollLeft;
+*/
     },
 
     /**
@@ -402,6 +409,10 @@
       }
 
       return null;
+    },
+
+    isVisible: function(element) {
+	return $(element).is(":visible") ? element : null; 
     },
 
     /**
@@ -715,10 +726,10 @@
       }
 
       // ADJUST TOP FOR SCROLL POSITION
-      if (!step.fixedElement) {
-        top += utils.getScrollTop();
-        left += utils.getScrollLeft();
-      }
+//      if (!step.fixedElement) {
+//        top += utils.getScrollTop();
+//        left += utils.getScrollLeft();
+//      }
 
       // ACCOUNT FOR FIXED POSITION ELEMENTS
       el.style.position = (step.fixedElement ? 'fixed' : 'absolute');
@@ -862,15 +873,19 @@
       el.style.zIndex = (typeof step.zindex === 'number') ? step.zindex : '';
       this._setArrow(step.placement);
 
-      // Set bubble positioning
       // Make sure we're using visibility:hidden instead of display:none for height/width calculations.
-      this.hide(false);
-      this.setPosition(step);
+//      this.hide(false);
 
       // only want to adjust window scroll for non-fixed elements
       if (callback) {
         callback(!step.fixedElement);
       }
+
+      // Set bubble positioning
+      // Make sure we're using visibility:hidden instead of display:none for height/width calculations.
+     //  this.hide(false);
+//      this.setPosition(step);
+
 
       return this;
     },
@@ -1418,6 +1433,7 @@
      */
     adjustWindowScroll = function(cb) {
       var bubble         = getBubble(),
+          step           = getCurrStep(),
 
           // Calculate the bubble element top and bottom position
           bubbleEl       = bubble.element,
@@ -1425,9 +1441,9 @@
           bubbleBottom   = bubbleTop + utils.getPixelValue(bubbleEl.offsetHeight),
 
           // Calculate the target element top and bottom position
-          targetEl       = utils.getStepTarget(getCurrStep()),
+          targetEl       = utils.getStepTarget(step),
           targetBounds   = targetEl.getBoundingClientRect(),
-          targetElTop    = targetBounds.top + utils.getScrollTop(),
+          targetElTop    = targetBounds.top + utils.getScrollTop(step.scrollAnchor),
           targetElBottom = targetBounds.bottom + utils.getScrollTop(),
 
           // The higher of the two: bubble or target
@@ -1440,7 +1456,7 @@
           windowBottom   = windowTop + utils.getWindowHeight(),
 
           // This is our final target scroll value.
-          scrollToVal    = targetTop - getOption('scrollTopMargin'),
+          scrollToVal    = targetTop - (step.scrollTopMargin?step.scrollTopMargin:getOption('scrollTopMargin')),
 
           scrollEl,
           yuiAnim,
@@ -1453,17 +1469,8 @@
       // Target and bubble are both visible in viewport
       if (targetTop >= windowTop && (targetTop <= windowTop + getOption('scrollTopMargin') || targetBottom <= windowBottom)) {
         if (cb) { cb(); } // HopscotchBubble.show
-      }
-
-      // Abrupt scroll to scroll target
-      else if (!getOption('smoothScroll')) {
-        window.scrollTo(0, scrollToVal);
-        if (cb) { cb(); } // HopscotchBubble.show
-      }
-
-        // Use jQuery if it exists
-      else if (hasJquery) {
-        jQuery('.scroll-container, body, html').animate({ scrollTop: scrollToVal }, getOption('scrollDuration'), cb);
+      } else {
+        jQuery(step.scrollAnchor?step.scrollAnchor:'body, html').animate({ scrollTop: scrollToVal }, getOption('scrollDuration'), cb);
       }
 
     },
@@ -1736,13 +1743,17 @@
       bubble.hide(false);
 
       bubble.render(step, stepNum, function(adjustScroll) {
-        // when done adjusting window scroll, call showBubble helper fn
-        if (adjustScroll) {
-          adjustWindowScroll(showBubble);
-        }
-        else {
-          showBubble();
-        }
+          // when done adjusting window scroll, call showBubble helper fn
+          if (adjustScroll) {
+            adjustWindowScroll(function() {
+                bubble.setPosition(step);
+                showBubble();
+            });
+          }
+          else {
+            bubble.setPosition(step);
+            showBubble();
+          }
 
         // If we want to advance to next step when user clicks on target.
         if (step.nextOnTargetClick) {
@@ -2264,10 +2275,7 @@
      *
      * - bubbleWidth:     Number   - Default bubble width. Defaults to 280.
      * - bubblePadding:   Number   - DEPRECATED. Default bubble padding. Defaults to 15.
-     * - smoothScroll:    Boolean  - should the page scroll smoothly to the next
-     *                               step? Defaults to TRUE.
-     * - scrollDuration:  Number   - Duration of page scroll. Only relevant when
-     *                               smoothScroll is set to true. Defaults to
+     * - scrollDuration:  Number   - Duration of page scroll. Defaults to
      *                               1000ms.
      * - scrollTopMargin: NUMBER   - When the page scrolls, how much space should there
      *                               be between the bubble/targetElement and the top
